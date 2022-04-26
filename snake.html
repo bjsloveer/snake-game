@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNAKE</title>
+    <style>
+        #game-div{ margin: 0 auto; text-align: center;}
+
+    </style>
+</head>
+<body>
+    
+    <!-- canvas 생성-->
+    <!-- 20 x 20 블럭한개 x 17 = 340 -->
+    <div id="game-div">
+        <h2>S N A K E G A M E</h2>
+        <canvas id="snake" width="340" height="340"></canvas>
+    </div>
+ 
+    <script>
+
+        const canvas = document.getElementById('snake');
+        const ctx = canvas.getContext('2d'); // 렌더링 컨텍스트를 다룰 수 있게 해준다.
+
+        // 위치를 저장하는 변수
+        let snakeX=snakeY=0 // 뱀위치 
+        let appleX=appleY=0
+        let interval 
+        const blockSize = 20, gameSize = 17
+
+        window.onload = () => {
+            // 방향키 이벤트
+            document.addEventListener("keydown", keyDown)
+            
+            // 1000ms 가 1초 -> 나누기 15는 1초에 15번 실행
+            interval = setInterval(play, 1000/15) //초당 15fps
+
+        }
+
+        function keyDown(event){
+            switch(event.keyCode){
+                
+                // 왼쪽
+                case 37:
+                    snakeX -= 1;
+                    snakeY += 0;
+                    break;
+                // 위    
+                case 38:
+                    snakeX += 0;
+                    snakeY -= 1;
+                    break;    
+                // 오른쪽    
+                case 39:
+                    snakeX += 1;
+                    snakeY += 0;
+                    break;    
+                // 아래     
+                case 40:
+                    snakeX += 0;
+                    snakeY += 1;
+                    break;    
+            }
+        }
+
+        // GameSize 사이의 랜덤 수를 리턴
+        function getRandom(){
+            return Math.floor( Math.random() * gameSize )
+        }
+
+        function play(){
+            // 배경 그리기
+            ctx.fillStyle = '#FFED99'
+            ctx.fillRect(0,0,canvas.width,canvas.height);            
+
+            // 블록 그리기
+            ctx.fillStyle = '#F6B8B8'
+            ctx.fillRect( snakeX * blockSize , snakeY * blockSize , blockSize , blockSize )
+            
+            // 사과그리기
+            ctx.fillStyle = '#3B14A7'
+            ctx.fillRect( getRandom() * blockSize , getRandom() * blockSize , blockSize , blockSize )    
+
+            if( snakeX < 0 || snakeX > ( gameSize -1 ) || snakeY < 0 || snakeY > ( gameSize - 1 ) ){
+                
+                stop();
+            }
+        }
+
+        function stop(){
+            alert('G A M E O V E R')
+            clearInterval(interval)
+        }
+
+
+    </script>
+
+</body>
+</html>
