@@ -5,93 +5,333 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SNAKE</title>
-    <style>
-        #game-div{ margin: 0 auto; text-align: center;}
 
+    <script src="https://code.jquery.com/jquery-3.6.0.slim.min.js" integrity="sha256-u7e5khyithlIdTpu22PHhENmPcRdFiHRjhAuHcs05RI=" crossorigin="anonymous"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/countup@1.8.2/countUp.js"></script>
+    <!--Import Google Icon Font-->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Water+Brush&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Bangers', cursive;  }
+        #game-div{ margin: 0 auto; text-align: center;}
+        canvas#snake { background-color: #91C483;border-radius: 15px;}
     </style>
+
+
+    <script>
+        let countUp
+
+        $(function(){
+            countUp = new CountUp('total-count', 0, 0)
+            countUp.start()
+        })
+
+        function score( eatCount ){
+            countUp.update( 100 * eatCount );
+        }
+
+    </script>
+
 </head>
 <body>
     
     <!-- canvas 생성-->
     <!-- 20 x 20 블럭한개 x 17 = 340 -->
     <div id="game-div">
-        <h2>S N A K E G A M E</h2>
+        <h2>SNAKE GAME</h2>
         <canvas id="snake" width="340" height="340"></canvas>
+        <div>
+            <h3>Total: <span id="total-count" >0</span></h3>
+
+        </div>
+        <div>
+            <a id="play-btn" class="waves-effect waves-light btn-large"><i class="material-icons right">play_arrow</i>PLAY</a>
+        </div>
     </div>
  
     <script>
 
-        const canvas = document.getElementById('snake');
-        const ctx = canvas.getContext('2d'); // 렌더링 컨텍스트를 다룰 수 있게 해준다.
+        const canvas = document.getElementById('snake')
+        const ctx = canvas.getContext('2d') // 렌더링 컨텍스트를 다룰 수 있게 해준다.
+        const blockSize = 20, gameSize = 17
+
+
+        const appleColor = '#FF6464'
+        //const gameBgColor = '#4E944F'
+        const snakeColor = '#EEEEEE'
+
 
         // 위치를 저장하는 변수
         let snakeX=snakeY=0 // 뱀위치 
+        let snakePreX=snakePreY=0 // 뱀의 이동 위치
         let appleX=appleY=0
-        let interval 
-        const blockSize = 20, gameSize = 17
+        let interval ;
+        let newApply = true ; // 사과를 먹어서 새로운 사과가 필요한지
+        let eatAppleCnt = 0; // 먹은 사과 개수   
+        
+        
+        let snakeHistory = [];
+        let snakeHead // 뱀 머리
+            
 
-        window.onload = () => {
+        // --------------------------------------------------------
+        // 방향 ( 처음 시작방향은 오른쪽 )
+        // 'R' : 오른쪽 
+        // 'L' : 왼쪽
+        // 'U' : 위로
+        // 'D' : 아래로
+        // --------------------------------------------------------
+        let direction = 'R' ; 
+
+
+        let playBtn = document.getElementById('play-btn');
+        playBtn.addEventListener('click' , (e) => {            
+            start()
+        });
+        
+
+        function start(){
             // 방향키 이벤트
             document.addEventListener("keydown", keyDown)
+                
+            // 1000ms 가 1초 
+            interval = setInterval(play, 1000 / 10  ) 
             
-            // 1000ms 가 1초 -> 나누기 15는 1초에 15번 실행
-            interval = setInterval(play, 1000/15) //초당 15fps
+        }        
 
-        }
-
+        /* 
+        ----------------------------------------------------
+        키보드 조작 기능
+        ----------------------------------------------------
+        */
         function keyDown(event){
             switch(event.keyCode){
                 
                 // 왼쪽
-                case 37:
-                    snakeX -= 1;
-                    snakeY += 0;
+                case 37:    
+
+                    if( direction != 'R'){
+                        direction = 'L' 
+                    }
                     break;
                 // 위    
                 case 38:
-                    snakeX += 0;
-                    snakeY -= 1;
+                    if( direction != 'D'){
+                        direction = 'U' 
+                    }
                     break;    
                 // 오른쪽    
                 case 39:
-                    snakeX += 1;
-                    snakeY += 0;
+                    if( direction != 'L'){
+                        direction = 'R' 
+                    }
                     break;    
                 // 아래     
                 case 40:
-                    snakeX += 0;
-                    snakeY += 1;
+                    if( direction != 'U'){    
+                        direction = 'D' 
+                    }    
                     break;    
-            }
+            }   
         }
 
-        // GameSize 사이의 랜덤 수를 리턴
+        /* 
+        ----------------------------------------------------
+        뱀과 겹치지 않게 사과 좌표 랜덤 생성
+        ----------------------------------------------------
+        */
         function getRandom(){
             return Math.floor( Math.random() * gameSize )
         }
 
-        function play(){
-            // 배경 그리기
-            ctx.fillStyle = '#FFED99'
-            ctx.fillRect(0,0,canvas.width,canvas.height);            
+        function getRandomApple(){
 
-            // 블록 그리기
-            ctx.fillStyle = '#F6B8B8'
-            ctx.fillRect( snakeX * blockSize , snakeY * blockSize , blockSize , blockSize )
+            appleX = getRandom()
+            appleY = getRandom()
             
-            // 사과그리기
-            ctx.fillStyle = '#3B14A7'
-            ctx.fillRect( getRandom() * blockSize , getRandom() * blockSize , blockSize , blockSize )    
+            
+            snakeHistory.forEach( snake => function(){
+              
+                if( snake.x == appleX && snake.y == appleY ){
+                   getRandomApple()
+                }     
+            })
 
+        }
+        
+
+        /* 
+        ----------------------------------------------------
+        게임 시작
+        ----------------------------------------------------
+        */
+        function play(){
+
+            // 배경 그리기 ( 백그라운드 칼라 css 로 대체 ??)
+            //ctx.fillStyle = gameBgColor
+            //ctx.fillRect(0,0,canvas.width,canvas.height);            
+
+            // 전체 화면 초기화
+            ctx.clearRect( 0,0,canvas.width,canvas.height )
+
+            // 사과그리기
+            drawApple();   
+
+            // 비얌그리기
+            drawSnake()
+
+            // GAME OVER
             if( snakeX < 0 || snakeX > ( gameSize -1 ) || snakeY < 0 || snakeY > ( gameSize - 1 ) ){
                 
                 stop();
             }
         }
 
+        
+        /* 
+        ----------------------------------------------------
+        비얌 자동으로 움직이게
+        ----------------------------------------------------
+        */
+        function snakeAutoMove(){
+            
+            switch(direction){
+                // 왼쪽
+                case 'L':    
+                    snakeX -= 1
+                    snakeY += 0
+                    break;
+                // 위    
+                case 'U':
+                    snakeX += 0
+                    snakeY -= 1
+                    break;    
+                // 오른쪽    
+                case 'R':
+                    snakeX += 1
+                    snakeY += 0
+                    break;    
+                // 아래     
+                case 'D':
+                    snakeX += 0
+                    snakeY += 1
+                    break;    
+            }   
+        }
+
+
+        /* 
+        ----------------------------------------------------
+        비얌 그리기
+        ----------------------------------------------------
+        */
+        function drawSnake(){
+            
+            snakeAutoMove();
+            
+            snakeHistory.push({
+                x : snakeX , 
+                y : snakeY  
+            })
+            
+            while( snakeHistory.length >  ( eatAppleCnt   + 1 ) ){    
+              snakeHistory.shift()
+            }
+
+            // 뱀머리 좌표
+            snakeHead = snakeHistory[0]
+
+            ctx.fillStyle = snakeColor
+            for( let i =0; i< snakeHistory.length; i++ ){
+                
+                // 뱀의 머리가 몸통을 지나갈 수 없게
+                if( i != 0 &&  snakeHead.x == snakeHistory[i].x && snakeHead.y == snakeHistory[i].y  ){
+                    stop();
+                }    
+
+                ctx.fillRect( snakeHistory[i].x * blockSize , snakeHistory[i].y * blockSize , blockSize , blockSize  )
+
+                
+            }    
+        }
+
+
+        /* 
+        ----------------------------------------------------
+        사과 랜덤 생성 
+        ----------------------------------------------------
+        */
+        function drawApple(){
+            
+            // 사과를 먹었으면 새로운 사과를 생성
+            if(  ( appleX== 0 && appleY == 0 ) || eatApple() ){
+                
+                getRandomApple();
+
+                //appleX = getRandomApple()
+                //appleY = getRandomApple()
+
+                if( appleX ==0 && appleY == 0 ){
+                    // 시작시 겹치지 않게
+                    drawApple();
+                }
+            }
+
+            ctx.fillStyle = appleColor
+            ctx.fillRect( appleX * blockSize , appleY * blockSize , blockSize , blockSize )    
+                
+
+        }
+
+        /* 
+        ----------------------------------------------------
+        비얌이 사과를 먹었는지 
+        ----------------------------------------------------
+        */
+        function eatApple(){
+
+            if( snakeX == appleX && snakeY == appleY ) {
+               // 비얌이 사과를 먹었으면 
+               // 먹은 사과 개수 + 1 
+               eatAppleCnt += 1;
+                
+               score( eatAppleCnt );
+                
+
+               return true;      
+            }
+            return false;
+        }
+
+        /* 
+        ----------------------------------------------------
+        변수 초기화
+        ----------------------------------------------------
+        */    
+        function init(){
+            snakeX=snakeY=0
+            appleX=appleY=0
+            newApply = true
+            eatAppleCnt = 0
+        }
+
+        /* 
+        ----------------------------------------------------
+        게임 종료
+        ----------------------------------------------------
+        */    
         function stop(){
-            alert('G A M E O V E R')
+            
+            init();
+            alert('G A M E O V E R !! ')
             clearInterval(interval)
+            return
         }
 
 
