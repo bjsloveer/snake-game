@@ -20,7 +20,10 @@
     <style>
         body { font-family: 'Bangers', cursive;  }
         #game-div{ margin: 0 auto; text-align: center;}
-        canvas#snake { background-color: #91C483;border-radius: 15px;}
+        /* canvas#snake { background-color: #91C483;} */
+        canvas#snake { background-image: url("./bg.png");  background-repeat : no-repeat; background-size : cover;}
+
+        
     </style>
 
 
@@ -42,10 +45,10 @@
 <body>
     
     <!-- canvas 생성-->
-    <!-- 20 x 20 블럭한개 x 17 = 340 -->
+    <!-- 25 x 25 블럭한개 x 17 = 425 -->
     <div id="game-div">
         <h2>SNAKE GAME</h2>
-        <canvas id="snake" width="340" height="340"></canvas>
+        <canvas id="snake" width="425" height="425"></canvas>
         <div>
             <h3>Total: <span id="total-count" >0</span></h3>
 
@@ -59,8 +62,17 @@
 
         const canvas = document.getElementById('snake')
         const ctx = canvas.getContext('2d') // 렌더링 컨텍스트를 다룰 수 있게 해준다.
-        const blockSize = 20, gameSize = 17
+        const blockSize = 25, gameSize = 17
 
+        const snakeImg = new Image();
+        snakeImg.src = 'snake-graphics.png';
+
+        // 소리
+        let soundEffect = new Audio('sound.mp3');
+
+        // 뱀 이미지 크롭 사이즈 
+        let tx = 0;
+        let ty = 0;
 
         const appleColor = '#FF6464'
         //const gameBgColor = '#4E944F'
@@ -68,15 +80,17 @@
 
 
         // 위치를 저장하는 변수
-        let snakeX=snakeY=0 // 뱀위치 
-        let snakePreX=snakePreY=0 // 뱀의 이동 위치
+        let snakeX=snakeY=2 // 뱀위치 
         let appleX=appleY=0
         let interval ;
         let newApply = true ; // 사과를 먹어서 새로운 사과가 필요한지
-        let eatAppleCnt = 0; // 먹은 사과 개수   
+        let eatAppleCnt = 1; // 먹은 사과 개수   
         
         
-        let snakeHistory = [];
+        let snakeHistory = [{
+            x  : 2, 
+            y  : 2
+        }];
         let snakeHead // 뱀 머리
             
 
@@ -92,6 +106,7 @@
 
         let playBtn = document.getElementById('play-btn');
         playBtn.addEventListener('click' , (e) => {            
+            snakeInit()
             start()
         });
         
@@ -101,7 +116,7 @@
             document.addEventListener("keydown", keyDown)
                 
             // 1000ms 가 1초 
-            interval = setInterval(play, 1000 / 10  ) 
+            interval = setInterval(play, 1000 / 10 ) 
             
         }        
 
@@ -154,7 +169,6 @@
 
             appleX = getRandom()
             appleY = getRandom()
-            
             
             snakeHistory.forEach( snake => function(){
               
@@ -225,6 +239,23 @@
             }   
         }
 
+        // 뱀 초기화
+        function snakeInit(){
+            snakeX=snakeY=2 // 뱀위치 
+            appleX=appleY=0
+            interval ;
+            newApply = true ; // 사과를 먹어서 새로운 사과가 필요한지
+            eatAppleCnt = 1; // 먹은 사과 개수   
+            
+            snakeHistory = [{
+                x  : 2, 
+                y  : 2
+            }];
+            snakeHead // 뱀 머리
+            direction = 'R' ; 
+
+        }
+
 
         /* 
         ----------------------------------------------------
@@ -233,6 +264,8 @@
         */
         function drawSnake(){
             
+            
+
             snakeAutoMove();
             
             snakeHistory.push({
@@ -248,14 +281,101 @@
             snakeHead = snakeHistory[0]
 
             ctx.fillStyle = snakeColor
+            
             for( let i =0; i< snakeHistory.length; i++ ){
                 
+                
+
                 // 뱀의 머리가 몸통을 지나갈 수 없게
                 if( i != 0 &&  snakeHead.x == snakeHistory[i].x && snakeHead.y == snakeHistory[i].y  ){
                     stop();
                 }    
 
-                ctx.fillRect( snakeHistory[i].x * blockSize , snakeHistory[i].y * blockSize , blockSize , blockSize  )
+                var segment = snakeHistory[i];
+                var segx = segment.x;
+                var segy = segment.y;    
+                var tx = 0;
+                var ty = 0;
+ 
+
+                if (i == 0) {
+                    // Head; Determine the correct image
+                    var pseg = snakeHistory[i+1]; // Next segment
+                    if( pseg == null  ){
+                        pseg = snakeHistory[i];
+                        
+                    }
+                    
+                    if (pseg.y < segy) {
+                        // Up
+                        tx = 3; ty = 2;
+                    } else if (pseg.x > segx) {
+                        // Right
+                        tx = 4; ty = 2;
+                    } else if (pseg.y > segy) {
+                        // Down
+                        tx = 4; ty = 3;
+                    } else if (pseg.x < segx) {
+                        // Left
+                        tx = 3; ty = 3;
+                    }
+
+                    
+
+
+                } else if (i == snakeHistory.length-1) {
+                    // Tail; Determine the correct image
+                    var nseg = snakeHistory[i-1]; // Prev segment
+                    
+                    
+                    if (segy < nseg.y) {
+                        // Up
+                        tx = 3; ty = 0;
+                    } else if (segx > nseg.x) {
+                        // Right
+                        tx = 4; ty = 0;
+                    } else if (segy > nseg.y) {
+                        // Down
+                        tx = 4; ty = 1;
+                    } else if (segx < nseg.x) {
+                        // Left
+                        tx = 3; ty = 1;
+                    }
+
+                } else {
+                    // Body; Determine the correct image
+                    var pseg = snakeHistory[i-1]; // Previous segment
+                    var nseg = snakeHistory[i+1]; // Next segment
+                    if (pseg.x < segx && nseg.x > segx || nseg.x < segx && pseg.x > segx) {
+                        // Horizontal Left-Right
+                        tx = 1; ty = 0;
+                    } else if (pseg.x < segx && nseg.y > segy || nseg.x < segx && pseg.y > segy) {
+                        // Angle Left-Down
+                        tx = 2; ty = 0;
+                    } else if (pseg.y < segy && nseg.y > segy || nseg.y < segy && pseg.y > segy) {
+                        // Vertical Up-Down
+                        tx = 2; ty = 1;
+                    } else if (pseg.y < segy && nseg.x < segx || nseg.y < segy && pseg.x < segx) {
+                        // Angle Top-Left
+                        tx = 2; ty = 2;
+                    } else if (pseg.x > segx && nseg.y < segy || nseg.x > segx && pseg.y < segy) {
+                        // Angle Right-Up
+                        tx = 0; ty = 1;
+                    } else if (pseg.y > segy && nseg.x > segx || nseg.y > segy && pseg.x > segx) {
+                        // Angle Down-Right
+                        tx = 0; ty = 0;
+                    }
+                }
+
+
+                ctx.drawImage(snakeImg, 
+                            tx *64,
+                            ty*64,
+                            64,
+                            64,
+                            snakeHistory[i].x * blockSize , snakeHistory[i].y * blockSize , blockSize , blockSize );
+
+                //ctx.fillRect( snakeHistory[i].x * blockSize , snakeHistory[i].y * blockSize , blockSize , blockSize  )
 
                 
             }    
@@ -283,9 +403,17 @@
                 }
             }
 
-            ctx.fillStyle = appleColor
-            ctx.fillRect( appleX * blockSize , appleY * blockSize , blockSize , blockSize )    
-                
+            //ctx.fillStyle = appleColor
+            //ctx.fillRect( appleX * blockSize , appleY * blockSize , blockSize , blockSize )    
+           
+            ctx.drawImage(snakeImg, 
+                            0 * 64,
+                            3 * 64,
+                            64,
+                            64,
+                            appleX * blockSize , appleY * blockSize , blockSize , blockSize );
+
+            
 
         }
 
@@ -298,7 +426,8 @@
 
             if( snakeX == appleX && snakeY == appleY ) {
                // 비얌이 사과를 먹었으면 
-               // 먹은 사과 개수 + 1 
+               // 먹은 사과 개수 + 1
+               soundEffect.play(); 
                eatAppleCnt += 1;
                 
                score( eatAppleCnt );
