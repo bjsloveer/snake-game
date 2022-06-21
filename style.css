@@ -1,0 +1,4 @@
+body { font-family: 'Bangers', cursive;  }
+#game-div{ margin: 0 auto; text-align: center;}
+/* canvas#snake { background-color: #91C483;} */
+canvas#snake { background-image: url("./bg.png");  background-repeat : no-repeat; background-size : cover;}
